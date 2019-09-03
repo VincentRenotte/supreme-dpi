@@ -104,10 +104,8 @@ func handlePacket(packet gopacket.Packet) []string {
 			ROSCTR := payload[8]
 			offset := 0
 			if ROSCTR == 0x01 {
-				//fmt.Println("Job")
 				s7Operation = append(s7Operation, "Job Rqst")
 			} else if ROSCTR == 0x03 {
-				//fmt.Println("Ack Data")
 				s7Operation = append(s7Operation, "Ack-Data")
 				//errorClass := payload[17]
 				//errorCode := payload[18]
@@ -121,17 +119,14 @@ func handlePacket(packet gopacket.Packet) []string {
 
 			//PDU Ref
 			protocolDataUnitRef := getInt(payload[11:13])
-			//fmt.Printf("ProtocolDataUnitRef is %d\n", protocolDataUnitRef)
 			s7Operation = append(s7Operation, strconv.Itoa(protocolDataUnitRef))
 
 			//Param Length
 			s7ParamLen := getInt(payload[13:15])
-			//fmt.Printf("Parameter length is %d\n", s7ParamLen)
 			s7Operation = append(s7Operation, strconv.Itoa(s7ParamLen))
 
 			//Data Length
 			s7DataLen := getInt(payload[15:17])
-			//fmt.Printf("Data length is %d\n", s7DataLen)
 			s7Operation = append(s7Operation, strconv.Itoa(s7DataLen))
 
 			// ------------ PARAMETER ----------- //
@@ -139,15 +134,14 @@ func handlePacket(packet gopacket.Packet) []string {
 
 			// -------------- DATA -------------- //
 			s7Operation = handleData(payload, offset, s7Operation)
-			//data = append(data, s7Operation)
 			return s7Operation
 
 		}
 	}
-	//fmt.Print("\n----------------------\n\n")
 	return nil
 }
 
+// Handles the "Parameters" part of the S7 layer
 func handleParam(payload []byte, offset int, s7Operation []string) []string {
 	s7Function := payload[17+offset]
 	//fmt.Printf("Function ID is %x -> Function is ", s7Function)
@@ -207,6 +201,7 @@ func handleParam(payload []byte, offset int, s7Operation []string) []string {
 	return s7Operation
 }
 
+// Handle the "Data" part of the S7 layer
 func handleData(payload []byte, offset int, s7Operation []string) []string {
 	s7DataLen := int(payload[16])
 	s7ParamLen := int(payload[14])
@@ -226,7 +221,6 @@ func handleData(payload []byte, offset int, s7Operation []string) []string {
 		data := payload[offset+s7ParamLen+21:]
 		s7Operation = append(s7Operation, fmt.Sprintf("%x", data))
 	}
-
 	return s7Operation
 }
 
