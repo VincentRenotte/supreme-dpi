@@ -16,13 +16,14 @@ import (
 )
 
 var (
-	pcapFile string = "/home/vincent/go/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo_bench.pcap"
-	//pcapFile   string = "/home/vincent/go/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo.pcap"
-	numberOfS7 int = 0
-	data       [][]string
+	//pcapFile string = "/home/vincent/go/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo_bench.pcap"
+	pcapFile   string = "/home/vincent/go/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo.pcap"
+	numberOfS7 int    = 0
 )
 
 func main() {
+	// Slice that we are going to fill with operations
+	data := [][]string{}
 
 	//To remove
 	dir, err := os.Getwd()
@@ -36,16 +37,15 @@ func main() {
 		panic(err)
 	} else {
 		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-
-		i := 1
 		for packet := range packetSource.Packets() {
-			//fmt.Println("Packet #", i)
-			//fmt.Println(packet)
-			i += 1
-			handlePacket(packet)
+			operation := handlePacket(packet)
+			if operation != nil {
+				data = append(data, operation)
+			}
 		}
 	}
 
+	// Printing the slice in a readable way
 	fmt.Println(
 		"Identifier|",
 		"ROSCTR    |",
@@ -67,7 +67,8 @@ func main() {
 	}
 }
 
-func handlePacket(packet gopacket.Packet) {
+//Takes a packet and returns a slice that will be added to data
+func handlePacket(packet gopacket.Packet) []string {
 	// ------------------------------------------- //
 	// ---------------- MAC LAYER ---------------- //
 	// ------------------------------------------- //
@@ -147,11 +148,13 @@ func handlePacket(packet gopacket.Packet) {
 
 			// -------------- DATA -------------- //
 			s7Operation = handleData(payload, offset, s7Operation)
-			data = append(data, s7Operation)
+			//data = append(data, s7Operation)
+			return s7Operation
 
 		}
 	}
 	//fmt.Print("\n----------------------\n\n")
+	return nil
 }
 
 func handleParam(payload []byte, offset int, s7Operation []string) []string {
