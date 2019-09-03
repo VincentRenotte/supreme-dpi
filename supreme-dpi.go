@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -15,7 +16,9 @@ import (
 )
 
 var (
-	pcapFile string = "/home/vincent/go/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo.pcap"
+	pcapFile   string = "/home/vincent/go/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo.pcap"
+	numberOfS7 int    = 0
+	data       [][]string
 )
 
 func main() {
@@ -40,6 +43,11 @@ func main() {
 			i += 1
 			handlePacket(packet)
 		}
+	}
+
+	fmt.Println(" ID  ROSCTR")
+	for _, y := range data {
+		fmt.Println(y)
 	}
 }
 
@@ -75,6 +83,11 @@ func handlePacket(packet gopacket.Packet) {
 		fmt.Printf("Protocol Id is %#x\n", protocolId)
 		//Analyze packet only if s7comm
 		if protocolId == 0x32 {
+			var s7Operation []string
+			numberOfS7 += 1
+			s7Operation = append(s7Operation, strconv.Itoa(numberOfS7))
+			//Create new S7 operation
+
 			// ------------ HEADER ------------ //
 			//MSG Type
 			ROSCTR := payload[8]
@@ -83,11 +96,14 @@ func handlePacket(packet gopacket.Packet) {
 			offset := 0
 			if ROSCTR == 1 {
 				fmt.Println("Job")
+				s7Operation = append(s7Operation, "Job")
 				// -> data
 			} else if ROSCTR == 3 {
 				fmt.Println("Ack Data")
+				s7Operation = append(s7Operation, "Ack Data")
 				errorClass := payload[17]
 				errorCode := payload[18]
+
 				fmt.Printf("errorClass is %d\n", errorClass)
 				fmt.Printf("errorCode is %d\n", errorCode)
 				offset = 2
@@ -112,6 +128,8 @@ func handlePacket(packet gopacket.Packet) {
 
 			// -------------- DATA -------------- //
 			handleData(payload, offset)
+			data = append(data, s7Operation)
+
 		}
 	}
 	fmt.Print("\n----------------------\n\n")
@@ -121,57 +139,44 @@ func handleParam(payload []byte, offset int) {
 	s7Function := payload[17+offset]
 	fmt.Printf("Function ID is %x -> Function is ", s7Function)
 
-	if s7Function == 0x05 {
-		fmt.Println("Write Var")
-		s7ItemCount := int(payload[18+offset])
-		fmt.Printf("There are %d item(s)\n", s7ItemCount)
-		//if job
-		if offset != 2 {
-			variableSpecification := payload[19+offset]
-			addressSpecificationLen := payload[20+offset]
-			syntaxId := payload[21+offset]
-			transportSize := payload[22+offset]
-			itemLen := getInt(payload[23+offset : 25+offset])
-			DBnumber := getInt(payload[25+offset : 27+offset])
-			area := payload[27+offset]
-			address := payload[28+offset : 30+offset]
-			fmt.Printf("variableSpecification is %#x\n", variableSpecification)
-			fmt.Printf("addressSpecificationLen is %d\n", addressSpecificationLen)
-			fmt.Printf("syntaxId is %#x\n", syntaxId)
-			fmt.Printf("transportSize is %d\n", transportSize)
-			fmt.Printf("itemLen is %d\n", itemLen)
-			fmt.Printf("DBnumber is %d\n", DBnumber)
-			fmt.Printf("area is %#x\n", area)
-			fmt.Printf("address is %#x\n", address)
-		}
-
-	} else if s7Function == 0x04 {
-		fmt.Println("Read Var")
-		s7ItemCount := int(payload[18+offset])
-		fmt.Printf("There are %d item(s)\n", s7ItemCount)
-		if offset != 2 {
-			variableSpecification := payload[19+offset]
-			addressSpecificationLen := payload[20+offset]
-			syntaxId := payload[21+offset]
-			transportSize := payload[22+offset]
-			itemLen := getInt(payload[23+offset : 25+offset])
-			DBnumber := getInt(payload[25+offset : 27+offset])
-			area := payload[27+offset]
-			address := payload[28+offset : 30+offset]
-			fmt.Printf("variableSpecification is %#x\n", variableSpecification)
-			fmt.Printf("addressSpecificationLen is %d\n", addressSpecificationLen)
-			fmt.Printf("syntaxId is %#x\n", syntaxId)
-			fmt.Printf("transportSize is %d\n", transportSize)
-			fmt.Printf("itemLen is %d\n", itemLen)
-			fmt.Printf("DBnumber is %d\n", DBnumber)
-			fmt.Printf("area is %#x\n", area)
-			fmt.Printf("address is %#x\n", address)
-		}
-
-	} else if s7Function == 0xf0 {
+	//Function is Setup communication
+	if s7Function == 0xf0 {
 		fmt.Println("Setup communication")
 		PDULength := getInt(payload[23+offset : 25+offset])
 		fmt.Printf("PDU Length is %d \n", PDULength)
+
+		//Function is Write or Read Variable
+	} else {
+		if s7Function == 0x05 {
+			fmt.Println("Write Var")
+		} else if s7Function == 0x04 {
+			fmt.Println("Read Var")
+		}
+		s7ItemCount := int(payload[18+offset])
+		fmt.Printf("There are %d item(s)\n", s7ItemCount)
+		// If job, we have additionnal fields
+		if offset != 2 {
+			variableSpecification := payload[19+offset]
+			addressSpecificationLen := payload[20+offset]
+			syntaxId := payload[21+offset]
+			transportSize := payload[22+offset]
+			// the length of the rest of this item.
+			itemLen := getInt(payload[23+offset : 25+offset])
+			// the address of the database,
+			DBnumber := getInt(payload[25+offset : 27+offset])
+			// memory area of the addressed variable
+			area := payload[27+offset]
+			// offset of the addressed variable in the selected memory area
+			address := payload[28+offset : 30+offset]
+			fmt.Printf("variableSpecification is %#x\n", variableSpecification)
+			fmt.Printf("addressSpecificationLen is %d\n", addressSpecificationLen)
+			fmt.Printf("syntaxId is %#x\n", syntaxId)
+			fmt.Printf("transportSize is %d\n", transportSize)
+			fmt.Printf("itemLen is %d\n", itemLen)
+			fmt.Printf("DBnumber is %d\n", DBnumber)
+			fmt.Printf("area is %#x\n", area)
+			fmt.Printf("address is %#x\n", address)
+		}
 	}
 }
 
