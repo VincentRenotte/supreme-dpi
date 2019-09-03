@@ -160,10 +160,7 @@ func handleParam(payload []byte, offset int, s7Operation []string) []string {
 		//fmt.Printf("PDU Length is %d \n", PDULength)
 
 		//no variableType, DBNumber, area and address
-		s7Operation = append(s7Operation, "N/A")
-		s7Operation = append(s7Operation, "N/A")
-		s7Operation = append(s7Operation, "N/A")
-		s7Operation = append(s7Operation, "N/A")
+		s7Operation = append(s7Operation, "N/A", "N/A", "N/A", "N/A")
 
 		//Function is Write or Read Variable
 	} else {
@@ -203,10 +200,7 @@ func handleParam(payload []byte, offset int, s7Operation []string) []string {
 			s7Operation = append(s7Operation, fmt.Sprintf("%#x", address))
 		} else {
 			//no variableType, DBNumber, area and address
-			s7Operation = append(s7Operation, "N/A")
-			s7Operation = append(s7Operation, "N/A")
-			s7Operation = append(s7Operation, "N/A")
-			s7Operation = append(s7Operation, "N/A")
+			s7Operation = append(s7Operation, "N/A", "N/A", "N/A", "N/A")
 		}
 	}
 
@@ -219,8 +213,7 @@ func handleData(payload []byte, offset int, s7Operation []string) []string {
 
 	if s7DataLen == 0 {
 		//fmt.Println("No data")
-		s7Operation = append(s7Operation, "N/A")
-		s7Operation = append(s7Operation, "N/A")
+		s7Operation = append(s7Operation, "N/A", "N/A")
 
 	} else if s7DataLen == 1 {
 		returnCode := payload[17+offset+s7ParamLen]
