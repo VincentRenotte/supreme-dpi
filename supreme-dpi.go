@@ -104,17 +104,11 @@ func handlePacket(packet gopacket.Packet) {
 			fmt.Printf("Data length is %d\n", s7DataLen)
 
 			// PARAMETER
-			s7Function := payload[17+offset]
-			handleParam(payload, s7Function, offset)
+			handleParam(payload, offset)
 
-			// s7ItemCount := int(payload[18+offset])
-			// fmt.Printf("There are %d item(s)\n", s7ItemCount)
+			// DATA
+			handleData(payload, offset)
 
-			// // DATA
-			// // ITEM
-
-			// returnCode := int(payload[19+offset+s7ParamLen])
-			// fmt.Printf("Return code is %d \n", returnCode)
 			// if returnCode == 255 {
 			// 	fmt.Println("Success (0xff)")
 			// } else if returnCode == 18 {
@@ -123,35 +117,45 @@ func handlePacket(packet gopacket.Packet) {
 			// 	data := payload[23+offset : 23+offset+s7DataLen]
 			// 	fmt.Printf("data is %q", data)
 			// }
-
-			// // Search for a string inside the payload
-			// if strings.Contains(string(payload), "HTTP") {
-			// 	fmt.Println("HTTP found!")
-			// }
 		}
-
-		// Iterate over all layers, printing out each layer type
-		// fmt.Println("All packet layers:")
-		// for _, layer := range packet.Layers() {
-		// 	fmt.Println("- ", layer.LayerType())
-		// }
-
 	}
 	fmt.Print("\n----------------------\n\n")
 }
 
-func handleParam(payload []byte, s7Function byte, offset int) {
+func handleParam(payload []byte, offset int) {
+	s7Function := payload[17+offset]
 	fmt.Printf("Function ID is %x -> Function is ", s7Function)
+
 	if s7Function == 0x05 {
 		fmt.Println("Write Var")
+		s7ItemCount := int(payload[18+offset])
+		fmt.Printf("There are %d item(s)\n", s7ItemCount)
 
 	} else if s7Function == 0x04 {
 		fmt.Println("Read Var")
+		s7ItemCount := int(payload[18+offset])
+		fmt.Printf("There are %d item(s)\n", s7ItemCount)
 
 	} else if s7Function == 0xf0 {
 		fmt.Println("Setup communication")
 		PDULength := getInt(payload[23+offset : 25+offset])
 		fmt.Printf("PDU Length is %d \n", PDULength)
+	}
+}
+
+func handleData(payload []byte, offset int) {
+	s7DataLen := int(payload[16])
+	s7ParamLen := int(payload[14])
+
+	if s7DataLen == 0 {
+		fmt.Println("No data")
+	} else if s7DataLen == 1 {
+		returnCode := payload[17+offset+s7ParamLen]
+		fmt.Printf("Return code is %x \n", returnCode)
+	} else {
+		returnCode := int(payload[17+offset+s7ParamLen])
+		fmt.Printf("Return code is %d \n", returnCode)
+		fmt.Printf("Data is : %X\n", payload[offset+s7ParamLen+21:])
 	}
 }
 
