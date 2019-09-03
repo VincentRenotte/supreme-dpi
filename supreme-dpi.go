@@ -1,8 +1,5 @@
 package main
 
-//fatal error: pcap.h: No such file or directory compilation terminated.
-//requires sudo apt-get install libpcap0.8-dev
-
 import (
 	"encoding/binary"
 	"fmt"
@@ -16,9 +13,9 @@ import (
 )
 
 var (
-	//pcapFile string = "/home/vincent/go/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo_bench.pcap"
-	pcapFile   string = os.Getenv("GOPATH") + "/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo.pcap"
-	numberOfS7 int    = 0
+	pcapFile string = "/home/vincent/go/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo_bench.pcap"
+	//pcapFile   string = os.Getenv("GOPATH") + "/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo.pcap"
+	numberOfS7 int = 0
 )
 
 func main() {
@@ -52,6 +49,7 @@ func main() {
 		"Para len  |",
 		"Data len  |",
 		"Function  |",
+		"Var Type  |",
 		"DB Number |",
 		"Area      |",
 		"Address   |",
@@ -73,7 +71,6 @@ func handlePacket(packet gopacket.Packet) []string {
 	// ------------------------------------------- //
 	ethernetLayer := packet.Layer(layers.LayerTypeEthernet)
 	if ethernetLayer != nil {
-		//fmt.Println("\nETHERNET LAYER")
 		//ethernetPacket, _ := ethernetLayer.(*layers.Ethernet)
 		//fmt.Printf("src %s ----> %s\n", ethernetPacket.SrcMAC, ethernetPacket.DstMAC)
 	}
@@ -83,7 +80,6 @@ func handlePacket(packet gopacket.Packet) []string {
 	// ------------------------------------------- //
 	ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	if ipLayer != nil {
-		//fmt.Println("\nIPv4 LAYER")
 		//ip, _ := ipLayer.(*layers.IPv4)
 		//fmt.Printf("src %s ----> %s\n", ip.SrcIP, ip.DstIP)
 	}
@@ -93,38 +89,34 @@ func handlePacket(packet gopacket.Packet) []string {
 	// ------------------------------------------- //
 	if packet.ApplicationLayer() != nil {
 		payload := packet.ApplicationLayer().Payload()
-		//fmt.Printf("%x\n", payload)
-		//fmt.Println("\nAPPLICATION LAYER")
 		protocolId := payload[7]
-		//fmt.Printf("Protocol Id is %#x\n", protocolId)
+
 		//Analyze packet only if s7comm
 		if protocolId == 0x32 {
+
+			//New s7Operation
 			var s7Operation []string
 			numberOfS7 += 1
 			s7Operation = append(s7Operation, strconv.Itoa(numberOfS7))
-			//Create new S7 operation
 
 			// ------------ HEADER ------------ //
 			//MSG Type
 			ROSCTR := payload[8]
-			//fmt.Printf("Message Type is %d -> ", ROSCTR)
-
 			offset := 0
-			if ROSCTR == 1 {
+			if ROSCTR == 0x01 {
 				//fmt.Println("Job")
-				s7Operation = append(s7Operation, "Job")
-				// -> data
-			} else if ROSCTR == 3 {
+				s7Operation = append(s7Operation, "Job Rqst")
+			} else if ROSCTR == 0x03 {
 				//fmt.Println("Ack Data")
-				s7Operation = append(s7Operation, "Ack Data")
+				s7Operation = append(s7Operation, "Ack-Data")
 				//errorClass := payload[17]
 				//errorCode := payload[18]
-
-				//fmt.Printf("errorClass is %d\n", errorClass)
-				//fmt.Printf("errorCode is %d\n", errorCode)
 				offset = 2
-				// -> no data
 				//If packet is ack data, we have Error Class and Error Code field
+			} else if ROSCTR == 0x02 {
+				s7Operation = append(s7Operation, "Ack")
+			} else if ROSCTR == 0x07 {
+				s7Operation = append(s7Operation, "Userdata")
 			}
 
 			//PDU Ref
@@ -167,6 +159,8 @@ func handleParam(payload []byte, offset int, s7Operation []string) []string {
 		//PDULength := getInt(payload[23+offset : 25+offset])
 		//fmt.Printf("PDU Length is %d \n", PDULength)
 
+		//no variableType, DBNumber, area and address
+		s7Operation = append(s7Operation, "N/A")
 		s7Operation = append(s7Operation, "N/A")
 		s7Operation = append(s7Operation, "N/A")
 		s7Operation = append(s7Operation, "N/A")
@@ -186,27 +180,30 @@ func handleParam(payload []byte, offset int, s7Operation []string) []string {
 			// variableSpecification := payload[19+offset]
 			// addressSpecificationLen := payload[20+offset]
 			// syntaxId := payload[21+offset]
-			// transportSize := payload[22+offset]
+
+			// Type of the variable
+			transportSize := payload[22+offset]
+			variableType := ""
+			if transportSize == 2 {
+				variableType = "BYTE"
+			}
 			// the length of the rest of this item.
 			//itemLen := getInt(payload[23+offset : 25+offset])
+
 			// the address of the database,
 			DBnumber := getInt(payload[25+offset : 27+offset])
 			// memory area of the addressed variable
 			area := payload[27+offset]
 			// offset of the addressed variable in the selected memory area
 			address := payload[28+offset : 30+offset]
-			//fmt.Printf("variableSpecification is %#x\n", variableSpecification)
-			//fmt.Printf("addressSpecificationLen is %d\n", addressSpecificationLen)
-			//fmt.Printf("syntaxId is %#x\n", syntaxId)
-			//fmt.Printf("transportSize is %d\n", transportSize)
-			//fmt.Printf("itemLen is %d\n", itemLen)
-			//fmt.Printf("DBnumber is %d\n", DBnumber)
+
+			s7Operation = append(s7Operation, variableType)
 			s7Operation = append(s7Operation, strconv.Itoa(DBnumber))
-			//fmt.Printf("area is %#x\n", area)
 			s7Operation = append(s7Operation, fmt.Sprintf("%#x", area))
-			//fmt.Printf("address is %#x\n", address)
 			s7Operation = append(s7Operation, fmt.Sprintf("%#x", address))
 		} else {
+			//no variableType, DBNumber, area and address
+			s7Operation = append(s7Operation, "N/A")
 			s7Operation = append(s7Operation, "N/A")
 			s7Operation = append(s7Operation, "N/A")
 			s7Operation = append(s7Operation, "N/A")
