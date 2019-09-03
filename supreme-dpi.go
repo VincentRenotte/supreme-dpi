@@ -35,53 +35,50 @@ func main() {
 
 		i := 1
 		for packet := range packetSource.Packets() {
-			fmt.Println(i)
+			fmt.Println("Packet #", i)
 			//fmt.Println(packet)
 			i += 1
-			handlePacket(packet) // Do something with a packet here.
+			handlePacket(packet)
 		}
 	}
 }
 
 func handlePacket(packet gopacket.Packet) {
-	// MAC Layer
+	// ------------------------------------------- //
+	// ---------------- MAC LAYER ---------------- //
+	// ------------------------------------------- //
 	ethernetLayer := packet.Layer(layers.LayerTypeEthernet)
 	if ethernetLayer != nil {
-		fmt.Println("Ethernet layer")
+		fmt.Println("\nETHERNET LAYER")
 		ethernetPacket, _ := ethernetLayer.(*layers.Ethernet)
 		fmt.Printf("src %s ----> %s\n", ethernetPacket.SrcMAC, ethernetPacket.DstMAC)
 	}
 
-	// IP Layer
+	// ------------------------------------------- //
+	// ---------------- IPv4 LAYER --------------- //
+	// ------------------------------------------- //
 	ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	if ipLayer != nil {
-		fmt.Println("IPv4 layer")
+		fmt.Println("\nIPv4 LAYER")
 		ip, _ := ipLayer.(*layers.IPv4)
 		fmt.Printf("src %s ----> %s\n", ip.SrcIP, ip.DstIP)
 	}
-	// if packet.Layer(layers.LayerTypeTCP) != nil {
-	// 	fmt.Println("TCP layer")
 
-	// S7 Communication
+	// ------------------------------------------- //
+	// ------------ APPLICATION LAYER ------------ //
+	// ------------------------------------------- //
 	if packet.ApplicationLayer() != nil {
 		payload := packet.ApplicationLayer().Payload()
 		//fmt.Printf("%x\n", payload)
-		fmt.Println("Application layer")
+		fmt.Println("\nAPPLICATION LAYER")
 		protocolId := payload[7]
-		fmt.Printf("Protocol Id is %d\n", protocolId)
+		fmt.Printf("Protocol Id is %#x\n", protocolId)
 		//Analyze packet only if s7comm
-		if protocolId == 50 {
-			// COTP
-			// TPKTVersion := payload[0]
-			// fmt.Printf("TPKT Version = %x\n", TPKTVersion)
-			// TPKTReserved := payload[1]
-			// fmt.Printf("TPKT Reserved = %x\n", TPKTReserved)
-			// TPKTLength := int(payload[3])
-			// fmt.Printf("TPKT Length = %d\n", TPKTLength)
-
-			// HEADER
+		if protocolId == 0x32 {
+			// ------------ HEADER ------------ //
+			//MSG Type
 			ROSCTR := payload[8]
-			fmt.Printf("ROSCTR is %d -> ", ROSCTR)
+			fmt.Printf("Message Type is %d -> ", ROSCTR)
 
 			offset := 0
 			if ROSCTR == 1 {
@@ -89,34 +86,32 @@ func handlePacket(packet gopacket.Packet) {
 				// -> data
 			} else if ROSCTR == 3 {
 				fmt.Println("Ack Data")
+				errorClass := payload[17]
+				errorCode := payload[18]
+				fmt.Printf("errorClass is %d\n", errorClass)
+				fmt.Printf("errorCode is %d\n", errorCode)
 				offset = 2
 				// -> no data
 				//If packet is ack data, we have Error Class and Error Code field
 			}
 
-			protocolDataUnitRef := payload[12]
+			//PDU Ref
+			protocolDataUnitRef := getInt(payload[11:13])
 			fmt.Printf("ProtocolDataUnitRef is %d\n", protocolDataUnitRef)
 
-			s7ParamLen := int(payload[14])
+			//Param Length
+			s7ParamLen := getInt(payload[13:15])
 			fmt.Printf("Parameter length is %d\n", s7ParamLen)
 
-			s7DataLen := int(payload[16])
+			//Data Length
+			s7DataLen := getInt(payload[15:17])
 			fmt.Printf("Data length is %d\n", s7DataLen)
 
-			// PARAMETER
+			// ------------ PARAMETER ----------- //
 			handleParam(payload, offset)
 
-			// DATA
+			// -------------- DATA -------------- //
 			handleData(payload, offset)
-
-			// if returnCode == 255 {
-			// 	fmt.Println("Success (0xff)")
-			// } else if returnCode == 18 {
-			// 	fmt.Println("Reserved (0x00)")
-
-			// 	data := payload[23+offset : 23+offset+s7DataLen]
-			// 	fmt.Printf("data is %q", data)
-			// }
 		}
 	}
 	fmt.Print("\n----------------------\n\n")
@@ -151,11 +146,11 @@ func handleData(payload []byte, offset int) {
 		fmt.Println("No data")
 	} else if s7DataLen == 1 {
 		returnCode := payload[17+offset+s7ParamLen]
-		fmt.Printf("Return code is %x \n", returnCode)
+		fmt.Printf("Return code is %#x \n", returnCode)
 	} else {
 		returnCode := int(payload[17+offset+s7ParamLen])
 		fmt.Printf("Return code is %d \n", returnCode)
-		fmt.Printf("Data is : %X\n", payload[offset+s7ParamLen+21:])
+		fmt.Printf("Data is : %#X\n", payload[offset+s7ParamLen+21:])
 	}
 }
 
