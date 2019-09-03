@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	pcapFile string = "/home/vincent/go/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo_bench.pcap"
-	//pcapFile   string = os.Getenv("GOPATH") + "/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo.pcap"
-	numberOfS7 int = 0
+	//pcapFile string = "/home/vincent/go/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo_bench.pcap"
+	pcapFile   string = os.Getenv("GOPATH") + "/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo.pcap"
+	numberOfS7 int    = 0
 )
 
 func main() {
@@ -224,15 +224,13 @@ func handleData(payload []byte, offset int, s7Operation []string) []string {
 
 	} else if s7DataLen == 1 {
 		returnCode := payload[17+offset+s7ParamLen]
-		//fmt.Printf("Return code is %#x \n", fmt.Sprintf("%#x", returnCode))
-		s7Operation = append(s7Operation, fmt.Sprintf("%#x", returnCode))
+		//Convert hex to string and add it
+		s7Operation = append(s7Operation, itemResponse(returnCode))
 		s7Operation = append(s7Operation, "N/A")
 	} else {
-		returnCode := int(payload[17+offset+s7ParamLen])
-		//fmt.Printf("Return code is %#x \n", returnCode)
-		s7Operation = append(s7Operation, fmt.Sprintf("%#x", returnCode))
+		returnCode := payload[17+offset+s7ParamLen]
+		s7Operation = append(s7Operation, itemResponse(returnCode))
 		data := payload[offset+s7ParamLen+21:]
-		//	fmt.Printf("Data is : %x\n", data)
 		s7Operation = append(s7Operation, fmt.Sprintf("%x", data))
 	}
 
@@ -243,4 +241,27 @@ func getInt(s []byte) int {
 	var b [8]byte
 	copy(b[8-len(s):], s)
 	return int(binary.BigEndian.Uint64(b[:]))
+}
+
+func itemResponse(b byte) string {
+	status := ""
+	switch b {
+	case 0x00:
+		status = "Reserved"
+	case 0x01:
+		status = "Hardware fault"
+	case 0x03:
+		status = "Accessing the object not allowed"
+	case 0x05:
+		status = "Address out of range"
+	case 0x06:
+		status = "Data type not supported"
+	case 0x07:
+		status = "Data type inconsistent"
+	case 0x0a:
+		status = "Object does not exist"
+	default:
+		status = "unknown"
+	}
+	return status
 }
