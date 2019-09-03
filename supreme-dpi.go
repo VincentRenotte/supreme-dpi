@@ -4,10 +4,10 @@ package main
 //requires sudo apt-get install libpcap0.8-dev
 
 import (
+	"encoding/binary"
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -49,8 +49,7 @@ func handlePacket(packet gopacket.Packet) {
 	if ethernetLayer != nil {
 		fmt.Println("Ethernet layer")
 		ethernetPacket, _ := ethernetLayer.(*layers.Ethernet)
-		fmt.Println("Source MAC: ", ethernetPacket.SrcMAC)
-		fmt.Println("Destination MAC: ", ethernetPacket.DstMAC)
+		fmt.Printf("src %s ----> %s\n", ethernetPacket.SrcMAC, ethernetPacket.DstMAC)
 	}
 
 	// IP Layer
@@ -58,7 +57,7 @@ func handlePacket(packet gopacket.Packet) {
 	if ipLayer != nil {
 		fmt.Println("IPv4 layer")
 		ip, _ := ipLayer.(*layers.IPv4)
-		fmt.Printf("From %s to %s\n", ip.SrcIP, ip.DstIP)
+		fmt.Printf("src %s ----> %s\n", ip.SrcIP, ip.DstIP)
 	}
 	// if packet.Layer(layers.LayerTypeTCP) != nil {
 	// 	fmt.Println("TCP layer")
@@ -67,7 +66,7 @@ func handlePacket(packet gopacket.Packet) {
 	if packet.ApplicationLayer() != nil {
 		payload := packet.ApplicationLayer().Payload()
 		//fmt.Printf("%x\n", payload)
-
+		fmt.Println("Application layer")
 		protocolId := payload[7]
 		fmt.Printf("Protocol Id is %d\n", protocolId)
 		//Analyze packet only if s7comm
@@ -87,41 +86,48 @@ func handlePacket(packet gopacket.Packet) {
 			offset := 0
 			if ROSCTR == 1 {
 				fmt.Println("Job")
+				// -> data
 			} else if ROSCTR == 3 {
 				fmt.Println("Ack Data")
 				offset = 2
+				// -> no data
 				//If packet is ack data, we have Error Class and Error Code field
 			}
 
-			protocolDataUnitRef := payload[12+offset]
+			protocolDataUnitRef := payload[12]
 			fmt.Printf("ProtocolDataUnitRef is %d\n", protocolDataUnitRef)
 
-			s7ParamLen := int(payload[14+offset])
+			s7ParamLen := int(payload[14])
 			fmt.Printf("Parameter length is %d\n", s7ParamLen)
 
-			s7DataLen := int(payload[16+offset])
+			s7DataLen := int(payload[16])
 			fmt.Printf("Data length is %d\n", s7DataLen)
 
 			// PARAMETER
-			s7Function := int(payload[17+offset])
-			fmt.Printf("Function ID is %d -> Function is ", s7Function)
-			if s7Function == 5 {
-				fmt.Println("Write Var")
-			} else if s7Function == 4 {
-				fmt.Println("Read Var")
-			} else if s7Function == 0 {
-				fmt.Println("Setup communication")
-			}
+			s7Function := payload[17+offset]
+			handleParam(payload, s7Function, offset)
 
-			//s7ItemCount := int(payload[18+offset])
-			//fmt.Printf("There are %d item(s)\n", s7ItemCount)
+			// s7ItemCount := int(payload[18+offset])
+			// fmt.Printf("There are %d item(s)\n", s7ItemCount)
 
-			// ITEM
+			// // DATA
+			// // ITEM
 
-			// Search for a string inside the payload
-			if strings.Contains(string(payload), "HTTP") {
-				fmt.Println("HTTP found!")
-			}
+			// returnCode := int(payload[19+offset+s7ParamLen])
+			// fmt.Printf("Return code is %d \n", returnCode)
+			// if returnCode == 255 {
+			// 	fmt.Println("Success (0xff)")
+			// } else if returnCode == 18 {
+			// 	fmt.Println("Reserved (0x00)")
+
+			// 	data := payload[23+offset : 23+offset+s7DataLen]
+			// 	fmt.Printf("data is %q", data)
+			// }
+
+			// // Search for a string inside the payload
+			// if strings.Contains(string(payload), "HTTP") {
+			// 	fmt.Println("HTTP found!")
+			// }
 		}
 
 		// Iterate over all layers, printing out each layer type
@@ -131,4 +137,26 @@ func handlePacket(packet gopacket.Packet) {
 		// }
 
 	}
+	fmt.Print("\n----------------------\n\n")
+}
+
+func handleParam(payload []byte, s7Function byte, offset int) {
+	fmt.Printf("Function ID is %x -> Function is ", s7Function)
+	if s7Function == 0x05 {
+		fmt.Println("Write Var")
+
+	} else if s7Function == 0x04 {
+		fmt.Println("Read Var")
+
+	} else if s7Function == 0xf0 {
+		fmt.Println("Setup communication")
+		PDULength := getInt(payload[23+offset : 25+offset])
+		fmt.Printf("PDU Length is %d \n", PDULength)
+	}
+}
+
+func getInt(s []byte) int {
+	var b [8]byte
+	copy(b[8-len(s):], s)
+	return int(binary.BigEndian.Uint64(b[:]))
 }
