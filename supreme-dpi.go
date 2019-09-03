@@ -17,14 +17,13 @@ import (
 
 var (
 	//pcapFile string = "/home/vincent/go/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo_bench.pcap"
-	pcapFile   string = "/home/vincent/go/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo.pcap"
+	pcapFile   string = os.Getenv("GOPATH") + "/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo.pcap"
 	numberOfS7 int    = 0
 )
 
 func main() {
 	// Slice that we are going to fill with operations
 	data := [][]string{}
-
 	//To remove
 	dir, err := os.Getwd()
 	if err != nil {
