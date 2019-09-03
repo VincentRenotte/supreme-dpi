@@ -186,8 +186,8 @@ func handleData(payload []byte, offset int) {
 		fmt.Printf("Return code is %#x \n", returnCode)
 	} else {
 		returnCode := int(payload[17+offset+s7ParamLen])
-		fmt.Printf("Return code is %d \n", returnCode)
-		fmt.Printf("Data is : %#X\n", payload[offset+s7ParamLen+21:])
+		fmt.Printf("Return code is %#x \n", returnCode)
+		fmt.Printf("Data is : %x\n", payload[offset+s7ParamLen+21:])
 	}
 }
 
