@@ -17,22 +17,22 @@ It will create a binary file in the bin of your go environment. Go there and jus
 I use github.com/google/gopacket to extract the packets from the pcap files. Once done, the function handlePacket will process it and read the payload of application layer.
 
 The program is able to extract any of the fields among the followings :
-1.ROSCTR    
-2.PDU Referencer
-3.Para length
-4.Data length  
-5.Function 
-6.Variable Type 
-7.DB Number 
-8.Area      
-9.Address   
-10.Returned Code 
-11.Data  
-12.error Class
-13.error Code  
-14.variable Specification
-15.address Specification Length
-16.syntaxId
+1. ROSCTR    
+2. PDU Referencer
+3. Para length
+4. Data length  
+5. Function 
+6. Variable Type 
+7. DB Number 
+8. Area      
+9. Address   
+10. Returned Code 
+11. Data  
+12. error Class
+13. error Code  
+14. variable Specification
+15. address Specification Length
+16. syntaxId
 
 Only the 11 first element are displayed in final output in order to increase readibility. However, it would take very little effort to add any of the following fields. It is also fairly easy to extract information about any other layer (MAC, IP or TCP for instance).
 
