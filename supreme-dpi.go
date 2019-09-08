@@ -13,9 +13,8 @@ import (
 )
 
 var (
-	//pcapFile string = "/home/vincent/go/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo_bench.pcap"
-	pcapFile   string = os.Getenv("GOPATH") + "/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo.pcap"
-	numberOfS7 int    = 0
+	//pcapFile string = os.Getenv("GOPATH") + "/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo_bench.pcap"
+	pcapFile string = os.Getenv("GOPATH") + "/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo.pcap"
 )
 
 func main() {
@@ -43,7 +42,6 @@ func main() {
 
 	// Printing the slice in a readable way
 	fmt.Println(
-		"Identifier|",
 		"ROSCTR    |",
 		"PDU Ref   |",
 		"Para len  |",
@@ -96,8 +94,6 @@ func handlePacket(packet gopacket.Packet) []string {
 
 			//New s7Operation
 			var s7Operation []string
-			numberOfS7 += 1
-			s7Operation = append(s7Operation, strconv.Itoa(numberOfS7))
 
 			// ------------ HEADER ------------ //
 			//MSG Type
@@ -148,10 +144,8 @@ func handleParam(payload []byte, offset int, s7Operation []string) []string {
 
 	//Function is Setup communication
 	if s7Function == 0xf0 {
-		//fmt.Println("Setup communication")
 		s7Operation = append(s7Operation, "Setup com.")
 		//PDULength := getInt(payload[23+offset : 25+offset])
-		//fmt.Printf("PDU Length is %d \n", PDULength)
 
 		//no variableType, DBNumber, area and address
 		s7Operation = append(s7Operation, "N/A", "N/A", "N/A", "N/A")
@@ -165,7 +159,7 @@ func handleParam(payload []byte, offset int, s7Operation []string) []string {
 			s7Operation = append(s7Operation, "Read Var")
 		}
 		//s7ItemCount := int(payload[18+offset])
-		//fmt.Printf("There are %d item(s)\n", s7ItemCount)
+
 		// If job, we have additionnal fields
 		if offset != 2 {
 			// variableSpecification := payload[19+offset]
