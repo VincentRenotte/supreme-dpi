@@ -41,10 +41,21 @@ The program is able to extract any of the fields among the followings :
 14. variable Specification
 15. address Specification Length
 16. syntaxId
+17. PDU Length
+18. Item length
 
 Only the 11 first element are displayed in final output in order to increase readibility. However, it would take very little effort to add any of the following fields. It is also fairly easy to extract information about any other layer (MAC, IP or TCP for instance).
 
 An important note is that I chosed a 2-dimensionnal slice to store the list of payloads and their attributes. On one hand, this allows a more natural way to read and display the output. On the other hand, adding more fields to handle different type of messages might be tricky because of the Non-Applicable (N/A) fields. To make it more flexible, one option would be to **create a struct "S7payload"** with field initiated to "N/A" in order to avoid the need of paddling the slice. 
+
+Currently, only BYTE will be displayed for variable TYPE (line 100). One may add the necessary cases if other types are to be expected :
+```golang
+transportSize := payload[22+offset]
+variableType := ""
+if transportSize == 2 {
+    variableType = "BYTE"
+}
+```
 
 ## Troubleshooting
 When trying to run this, I get 
