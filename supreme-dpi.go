@@ -17,7 +17,7 @@ var (
 )
 
 func main() {
-	// Slice that we are going to fill with operations
+	// 2D Slice that we are going to fill with payloads = operations
 	data := [][]string{}
 
 	//from https://godoc.org/github.com/google/gopacket/pcap
@@ -26,8 +26,10 @@ func main() {
 	} else {
 		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 		for packet := range packetSource.Packets() {
+			// Extracting payload from each packet
 			operation := handlePacket(packet)
 			if operation != nil {
+				// Adding packet's payload in our 2D slice
 				data = append(data, operation)
 			}
 		}
@@ -91,15 +93,20 @@ func handlePacket(packet gopacket.Packet) []string {
 			// ------------ HEADER ------------ //
 			//MSG Type
 			ROSCTR := payload[8]
+
+			//Some fields are not present depending the ROSCTR
 			offset := 0
+
 			if ROSCTR == 0x01 {
 				s7Operation = append(s7Operation, "Job Rqst")
 			} else if ROSCTR == 0x03 {
 				s7Operation = append(s7Operation, "Ack-Data")
 				//errorClass := payload[17]
 				//errorCode := payload[18]
-				offset = 2
+
 				//If packet is ack data, we have Error Class and Error Code field
+				offset = 2
+
 			} else if ROSCTR == 0x02 {
 				s7Operation = append(s7Operation, "Ack")
 			} else if ROSCTR == 0x07 {
@@ -132,8 +139,8 @@ func handlePacket(packet gopacket.Packet) []string {
 
 // Handles the "Parameters" part of the S7 layer
 func handleParam(payload []byte, offset int, s7Operation []string) []string {
+
 	s7Function := payload[17+offset]
-	//fmt.Printf("Function ID is %x -> Function is ", s7Function)
 
 	//Function is Setup communication
 	if s7Function == 0xf0 {
@@ -170,8 +177,10 @@ func handleParam(payload []byte, offset int, s7Operation []string) []string {
 
 			// the address of the database,
 			DBnumber := getInt(payload[25+offset : 27+offset])
+
 			// memory area of the addressed variable
 			area := payload[27+offset]
+
 			// offset of the addressed variable in the selected memory area
 			address := payload[28+offset : 30+offset]
 
@@ -179,6 +188,7 @@ func handleParam(payload []byte, offset int, s7Operation []string) []string {
 			s7Operation = append(s7Operation, strconv.Itoa(DBnumber))
 			s7Operation = append(s7Operation, fmt.Sprintf("%#x", area))
 			s7Operation = append(s7Operation, fmt.Sprintf("%#x", address))
+
 		} else {
 			//no variableType, DBNumber, area and address
 			s7Operation = append(s7Operation, "N/A", "N/A", "N/A", "N/A")
@@ -194,20 +204,20 @@ func handleData(payload []byte, offset int, s7Operation []string) []string {
 	s7ParamLen := int(payload[14])
 
 	if s7DataLen == 0 {
-		//fmt.Println("No data")
 		s7Operation = append(s7Operation, "N/A", "N/A")
 
 	} else if s7DataLen == 1 {
 		returnCode := payload[17+offset+s7ParamLen]
-		//Convert hex to string and add it
 		s7Operation = append(s7Operation, itemResponse(returnCode))
 		s7Operation = append(s7Operation, "N/A")
+
 	} else {
 		returnCode := payload[17+offset+s7ParamLen]
 		s7Operation = append(s7Operation, itemResponse(returnCode))
 		data := payload[offset+s7ParamLen+21:]
 		s7Operation = append(s7Operation, fmt.Sprintf("%x", data))
 	}
+
 	return s7Operation
 }
 
