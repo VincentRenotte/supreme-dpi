@@ -1,5 +1,5 @@
 # supreme-dpi
-ébauche de dissecteur protocolaire S7
+Rough sketch of protocolar dissector for Siemens communication protocol S7 
 ## How to run it
 Clone this repository in your go folder :
 
@@ -12,6 +12,14 @@ Create the executable :
 It will create a binary file in the bin of your go environment. Go there and just do :
 
 `supreme-dpi`
+
+One can change the used pcap files at line 15 :
+```golang
+var (
+	//pcapFile string = os.Getenv("GOPATH") + "/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo_bench.pcap"
+	pcapFile string = os.Getenv("GOPATH") + "/src/github.com/VincentRenotte/supreme-dpi/files/s7comm_varservice_libnodavedemo.pcap"
+)
+```
 
 ## A few words
 I use github.com/google/gopacket to extract the packets from the pcap files. Once done, the function handlePacket will process it and read the payload of application layer.
