@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 
@@ -20,12 +19,6 @@ var (
 func main() {
 	// Slice that we are going to fill with operations
 	data := [][]string{}
-	//To remove
-	dir, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(dir)
 
 	//from https://godoc.org/github.com/google/gopacket/pcap
 	if handle, err := pcap.OpenOffline(pcapFile); err != nil {
