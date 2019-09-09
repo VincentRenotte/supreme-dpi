@@ -57,6 +57,8 @@ if transportSize == 2 {
 }
 ```
 
+The "offset" variable is here because according to the type of message some fields are present or not. Thus it is necessary to "paddle" when reading the payload slice.
+
 ## Troubleshooting
 When trying to run this, I get 
 
